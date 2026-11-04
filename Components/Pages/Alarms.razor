@@ -1,0 +1,121 @@
+@page "/alarms"
+@inherits BuildingComponentBase
+<PageTitle>Alarms · Smart Building Dashboard</PageTitle>
+<PageHeading Title="Alarm management" Description="Monitor exceptions, investigate conditions, and acknowledge what needs attention.">
+    <StatusBadge Label="@(State.UnacknowledgedCount + " unacknowledged")" Tone="warning" />
+</PageHeading>
+<div class="alarm-metrics">
+    <MetricCard Label="Active conditions" Value="@State.ActiveAlarmCount.ToString("00")" Icon="@Icons.Material.Outlined.NotificationsActive" Detail="Conditions currently outside limits" Tone="red" />
+    <MetricCard Label="Critical alarms" Value="@State.Alarms.Count(a => a.IsActive && a.Severity == AlarmSeverity.Critical).ToString("00")" Icon="@Icons.Material.Outlined.ReportProblem" Detail="Priority response required" Tone="red" />
+    <MetricCard Label="Active warnings" Value="@State.Alarms.Count(a => a.IsActive && a.Severity == AlarmSeverity.Warning).ToString("00")" Icon="@Icons.Material.Outlined.WarningAmber" Detail="Review operating conditions" Tone="amber" />
+    <MetricCard Label="Acknowledged" Value="@State.Alarms.Count(a => a.IsAcknowledged && a.IsActive).ToString("00")" Icon="@Icons.Material.Outlined.TaskAlt" Detail="Active faults remain visible" />
+</div>
+<section class="panel alarm-table-panel">
+    <div class="panel-heading">
+        <div>
+            <h2>Alarm register</h2>
+            <p>Room, equipment &amp; building conditions</p>
+        </div>
+        <span class="muted">@FilteredAlarms.Count() of @State.Alarms.Count alarms</span>
+    </div>
+    <div class="alarm-toolbar">
+        <div class="floor-tabs" role="group" aria-label="Filter alarm severity">@foreach (var severity in new[] { "All severities", "Critical", "Warning" }) { <MudButton Class="@(_severity == severity ? "floor-tab active" : "floor-tab")" OnClick="() => _severity = severity">@severity</MudButton> }</div>
+        <div class="alarm-filter-fields">
+            <MudTextField T="string" @bind-Value="_search" Placeholder="Search alarms…" aria-label="Search alarms" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" Immediate="true" Clearable="true" />
+            <MudSelect T="string" @bind-Value="_status" Label="Condition" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                <MudSelectItem Value="@("all")">All conditions</MudSelectItem>
+                <MudSelectItem Value="@("active")">Active</MudSelectItem>
+                <MudSelectItem Value="@("returned")">Returned to normal</MudSelectItem>
+            </MudSelect>
+        </div>
+    </div>
+    <MudTable T="Alarm" Items="FilteredAlarms" Hover="true" Dense="true" Elevation="0" Breakpoint="Breakpoint.Sm" Class="alarm-table">
+        <HeaderContent>
+            <MudTh>Severity / ID</MudTh>
+            <MudTh>Source &amp; description</MudTh>
+            <MudTh>Triggered</MudTh>
+            <MudTh>Condition</MudTh>
+            <MudTh>Acknowledgement</MudTh>
+        </HeaderContent>
+        <RowTemplate Context="alarm">
+            <MudTd DataLabel="Severity / ID">
+                <div class="alarm-severity-cell">
+                    <StatusBadge Label="@alarm.Severity.ToString()" Tone="@alarm.Severity.ToString().ToLowerInvariant()" />
+                    <small>@alarm.Id</small>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Source & description">
+                <div class="alarm-description-cell">
+                    <strong>@alarm.Source</strong>
+                    <span>@alarm.Description</span>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Triggered">
+                <div class="alarm-time">
+                    <strong>@alarm.TriggeredAt.ToLocalTime().ToString("HH:mm:ss")</strong>
+                    <small>@alarm.TriggeredAt.ToLocalTime().ToString("dd MMM yyyy")</small>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Condition">
+                <StatusBadge Label="@(alarm.IsActive ? "Active" : "Returned to normal")" Tone="@(alarm.IsActive ? alarm.Severity.ToString().ToLowerInvariant() : "normal")" />
+            </MudTd>
+            <MudTd DataLabel="Acknowledgement">@if (alarm.IsAcknowledged) { <div class="acknowledged-cell">
+                    <MudIcon Icon="@Icons.Material.Outlined.DoneAll" Size="Size.Small" />
+                    <div>Acknowledged<small>@alarm.AcknowledgedAt?.ToLocalTime().ToString("HH:mm:ss")</small>
+                    </div>
+                </div> } else { <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="() => State.Acknowledge(alarm.Id)" aria-label="@($"Acknowledge {alarm.Id}")">Acknowledge</MudButton> }</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Outlined.TaskAlt" />
+                <h3>No matching alarms</h3>
+                <p>Try a different severity, condition, or search term.</p>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+    <div class="table-footer">
+        <span>
+            <span class="status-dot">
+            </span>@(State.IsPaused ? "Condition evaluation paused" : "Live condition evaluation · every 4 seconds")</span>
+        <span>@FilteredAlarms.Count() records</span>
+    </div>
+</section>
+<div class="alarm-principle">
+    <MudIcon Icon="@Icons.Material.Outlined.Info" />
+    <div>
+        <strong>Acknowledging means “I have seen this.”</strong>
+        <p>An acknowledgement records operator awareness. It does not clear the underlying fault. A condition returns to normal only when its sensor or device state recovers.</p>
+    </div>
+</div>
+<div class="alarm-rules-grid">
+    <div class="panel alarm-rule">
+        <span class="rule-label">TEMPERATURE</span>
+        <strong>≥ 27 °C</strong>
+        <p>Critical temperature threshold</p>
+    </div>
+    <div class="panel alarm-rule">
+        <span class="rule-label">AIR QUALITY</span>
+        <strong>≥ 1,000 ppm</strong>
+        <p>CO₂ warning threshold</p>
+    </div>
+    <div class="panel alarm-rule">
+        <span class="rule-label">POWER DEMAND</span>
+        <strong>&gt; 16 kW</strong>
+        <p>Estimated building demand advisory</p>
+    </div>
+    <div class="panel alarm-rule">
+        <span class="rule-label">CONNECTIVITY</span>
+        <strong>Offline</strong>
+        <p>Device communication failure</p>
+    </div>
+</div>
+@code {
+    private string _severity = "All severities";
+    private string _status = "all";
+    private string? _search;
+    private IEnumerable<Alarm> FilteredAlarms => State.Alarms
+        .Where(a => _severity == "All severities" || a.Severity.ToString() == _severity)
+        .Where(a => _status == "all" || (_status == "active" ? a.IsActive : !a.IsActive))
+        .Where(a => string.IsNullOrWhiteSpace(_search) || $"{a.Id} {a.Source} {a.Description}".Contains(_search, StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(a => a.IsActive).ThenBy(a => a.Severity).ThenByDescending(a => a.TriggeredAt);
+}
