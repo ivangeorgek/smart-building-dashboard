@@ -1,0 +1,82 @@
+@page "/trends"
+@inherits BuildingComponentBase
+<PageTitle>Trends &amp; Energy · Smart Building Dashboard</PageTitle>
+<PageHeading Title="Trends & energy" Description="Understand your indoor environment and where your building uses energy.">
+    <StatusBadge Label="Simulated historical data" Tone="selected" />
+</PageHeading>
+<div class="trends-metrics">
+    <MetricCard Label="Current building demand" Value="@State.PowerKw.ToString("F2")" Unit="kW" Icon="@Icons.Material.Outlined.Bolt" Detail="Rooms + central equipment" Tone="blue" />
+    <MetricCard Label="Estimated electrical energy" Value="@State.EnergyKwh.ToString("F2")" Unit="kWh" Icon="@Icons.Material.Outlined.ElectricMeter" Detail="24-hour historical seed + live integration" />
+    <MetricCard Label="Energy during this session" Value="@State.SessionEnergyKwh.ToString("F3")" Unit="kWh" Icon="@Icons.Material.Outlined.Timeline" Detail="@(State.SimulatedDuration.ToString(@"hh\:mm\:ss") + " of running simulation")" />
+</div>
+<section class="panel temperature-trend-panel">
+    <div class="panel-heading">
+        <div>
+            <h2>Room temperature trend</h2>
+            <p>Measured temperature and target setpoint · rolling session history</p>
+        </div>
+        <div class="chart-room-selector">
+            <MudSelect T="string" Value="_roomId" ValueChanged="SelectRoom" Label="Monitored room" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">@foreach (var room in State.Rooms) { <MudSelectItem T="string" Value="room.Id">Floor @room.FloorNumber · @room.Name</MudSelectItem> }</MudSelect>
+        </div>
+    </div>
+    <div class="trend-current-reading">
+        <span>NOW</span>
+        <strong>@SelectedRoom.Temperature.ToString("F1") <small>°C</small>
+        </strong>
+        <span class="trend-setpoint">Setpoint @SelectedRoom.Setpoint.ToString("F1") °C</span>
+        <StatusBadge Label="@SelectedRoom.Status.ToString()" Tone="@SelectedRoom.Status.ToString().ToLowerInvariant()" />
+    </div>
+    <TemperatureChart Room="SelectedRoom" @key="_roomId" />
+    <div class="panel-note">
+        <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />@(SelectedRoom.IsOnline ? "Starts with 30 minutes of generated history, then follows live readings. Old samples are capped at 240." : "Controller offline: historical readings are frozen at the last known timestamp.")</div>
+</section>
+<div class="trends-energy-grid">
+    <section class="panel">
+        <div class="panel-heading">
+            <div>
+                <h2>24-hour energy profile</h2>
+                <p>Completed hourly intervals · generated historical values</p>
+            </div>
+            <span class="unit-tag">kWh</span>
+        </div>
+        <EnergyChart Readings="State.HourlyEnergy" Height="250px" />
+        <div class="panel-note">Each point is electrical energy consumed during one hour, not instantaneous power.</div>
+    </section>
+    <section class="panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Energy by floor</h2>
+                <p>Estimated allocation · historical seed + session</p>
+            </div>
+            <span class="unit-tag">kWh</span>
+        </div>
+        <div class="floor-energy-list">@foreach (var floor in State.Building.Floors) { <div class="floor-energy-item">
+                <div>
+                    <span>Floor @floor.Number</span>
+                    <strong>@floor.EnergyKwh.ToString("F1") <small>kWh</small>
+                    </strong>
+                </div>
+                <div class="floor-energy-track">
+                    <span style="width:@((floor.EnergyKwh / State.EnergyKwh * 100).ToString("F1", CultureInfo.InvariantCulture))%">
+                    </span>
+                </div>
+                <p>Current demand <span>@floor.PowerKw.ToString("F2") kW</span>
+                </p>
+            </div> }<div class="central-energy-row">
+                <MudIcon Icon="@Icons.Material.Outlined.Air" Size="Size.Small" />
+                <span>Central equipment</span>
+                <strong>@((State.EnergyKwh - State.Building.Floors.Sum(f => f.EnergyKwh)).ToString("F1")) kWh</strong>
+            </div>
+        </div>
+    </section>
+</div>
+<div class="engineering-note">
+    <MudIcon Icon="@Icons.Material.Outlined.Functions" Size="Size.Small" />
+    <p>
+        <strong>A note on units</strong>Power (kW) is the rate of electricity use. Energy (kWh) is accumulated power over time. The live simulation integrates average power over the actual elapsed time; historical data is illustrative.</p>
+</div>
+@code {
+    private string _roomId = "F3-03";
+    private Room SelectedRoom => State.GetRoom(_roomId);
+    private void SelectRoom(string id) => _roomId = id;
+}

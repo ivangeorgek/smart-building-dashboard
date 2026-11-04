@@ -1,0 +1,32 @@
+<div class="temperature-chart" role="img" aria-label="@($"Simulated measured temperature and desired setpoint for {Room.Name}, in degrees Celsius")">
+    <MudBlazor.Charts.Line T="double" ChartSeries="Series" ChartLabels="Labels" ChartOptions="_options" MatchBoundsToSize="true" Width="100%" Height="280px" />
+</div>
+@code {
+    [Parameter, EditorRequired] public Room Room { get; set; } = default!;
+    private readonly LineChartOptions _options = new()
+    {
+        ChartPalette = ["#279697", "#90a9c0"], YAxisFormat = "F1", YAxisTitle = "°C", YAxisRequireZeroPoint = false,
+        YAxisTicks = 1, XAxisLines = false, YAxisLines = true, LineStrokeWidth = 2.5, ShowLegend = true,
+        ShowToolTips = true, InterpolationOption = InterpolationOption.Straight
+    };
+    // Uniform time samples keep the line chart's equal-width x axis honest even as live 4 s
+    // readings follow a seed sampled every minute. Values are interpolated, never re-randomized.
+    private DateTimeOffset TimeAt(int index)
+    {
+        var first = Room.History[0].Timestamp;
+        return first.AddTicks((Room.History[^1].Timestamp - first).Ticks * index / 30);
+    }
+    private SensorReading Sample(int index)
+    {
+        var time = TimeAt(index);
+        var before = Room.History.LastOrDefault(r => r.Timestamp <= time) ?? Room.History[0];
+        var after = Room.History.FirstOrDefault(r => r.Timestamp >= time) ?? Room.History[^1];
+        var fraction = after.Timestamp == before.Timestamp ? 0 : (time - before.Timestamp).TotalSeconds / (after.Timestamp - before.Timestamp).TotalSeconds;
+        return new(time, before.Temperature + (after.Temperature - before.Temperature) * fraction, index == 30 ? Room.Setpoint : before.Setpoint);
+    }
+    private string[] Labels => Enumerable.Range(0, 31).Select(i => i % 5 == 0 ? TimeAt(i).ToLocalTime().ToString("HH:mm") : "").ToArray();
+    private List<ChartSeries<double>> Series => [
+        new() { Name = "Measured (°C)", Data = new(Enumerable.Range(0, 31).Select(i => Sample(i).Temperature).ToArray()) },
+        new() { Name = "Setpoint (°C)", Data = new(Enumerable.Range(0, 31).Select(i => Sample(i).Setpoint).ToArray()) }
+    ];
+}
