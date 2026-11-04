@@ -1,0 +1,94 @@
+@inherits BuildingComponentBase
+<aside class="panel room-control-panel" aria-label="Room controls" data-room="@Room.Id">
+    <div class="control-panel-heading">
+        <div class="eyebrow">ROOM CONTROL PANEL</div>
+        <div class="room-title-row">
+            <h2>@Room.Name</h2>
+            <StatusBadge Label="@Room.Status.ToString()" Tone="@Room.Status.ToString().ToLowerInvariant()" />
+        </div>
+        <p>
+            <span>@Room.Id</span>
+            <span>Floor @Room.FloorNumber</span>
+            <span>@(Room.IsOccupied ? "Occupied" : "Unoccupied")</span>
+        </p>
+    </div>
+    @if (!Room.IsOnline) { <div class="offline-notice">
+        <MudIcon Icon="@Icons.Material.Outlined.CloudOff" Size="Size.Small" />
+        <div>Controller offline<small>Controls locked. Last seen @Room.LastSeen.ToLocalTime().ToString("HH:mm:ss"). Readings are stale.</small>
+        </div>
+    </div> }
+    <div class="room-temperature">
+        <div>
+            <span>MEASURED TEMPERATURE</span>
+            <strong>@Room.Temperature.ToString("F1")<small> °C</small>
+            </strong>
+        </div>
+        <span class="temperature-glyph @(Room.Temperature >= 27 ? "hot" : "")">
+            <MudIcon Icon="@Icons.Material.Outlined.Thermostat" />
+        </span>
+    </div>
+    <div class="control-section setpoint-section">
+        <div class="section-label">
+            <span>Temperature setpoint</span>
+            <span class="control-subtle">18–28 °C</span>
+        </div>
+        <div class="setpoint-stepper">
+            <MudIconButton Icon="@Icons.Material.Outlined.Remove" Size="Size.Small" aria-label="Decrease temperature setpoint" Disabled="@(!Room.IsOnline || Room.Setpoint <= 18)" OnClick="() => State.SetTemperature(Room.Id, Room.Setpoint - 0.5)" />
+            <output aria-label="Temperature setpoint">@Room.Setpoint.ToString("F1") <span>°C</span>
+            </output>
+            <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" aria-label="Increase temperature setpoint" Disabled="@(!Room.IsOnline || Room.Setpoint >= 28)" OnClick="() => State.SetTemperature(Room.Id, Room.Setpoint + 0.5)" />
+        </div>
+        <p class="control-help">The room adjusts gradually toward this target.</p>
+    </div>
+    <div class="control-section">
+        <MudSelect T="HvacMode" Label="HVAC operating mode" Value="Room.HvacMode" ValueChanged="(HvacMode mode) => State.SetHvacMode(Room.Id, mode)" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="@(!Room.IsOnline)" Dense="true">
+            @foreach (var mode in Enum.GetValues<HvacMode>()) { <MudSelectItem T="HvacMode" Value="mode">@mode</MudSelectItem> }
+        </MudSelect>
+    </div>
+    <div class="control-section lighting-section">
+        <div class="lighting-heading">
+            <div class="section-label">
+                <MudIcon Icon="@Icons.Material.Outlined.Lightbulb" Size="Size.Small" />
+                <span>Room lighting</span>
+            </div>
+            <MudSwitch T="bool" Value="Room.LightsOn" ValueChanged="(bool enabled) => State.SetLights(Room.Id, enabled)" Disabled="@(!Room.IsOnline)" Color="Color.Primary" aria-label="Room lighting" />
+        </div>
+        <div class="brightness-label">
+            <span>Brightness</span>
+            <strong>@Room.EffectiveBrightness<span>%</span>
+            </strong>
+        </div>
+        <MudSlider T="int" Min="0" Max="100" Step="5" Value="Room.EffectiveBrightness" ValueChanged="(int value) => State.SetBrightness(Room.Id, value)" Disabled="@(!Room.IsOnline || !Room.LightsOn)" Color="Color.Primary" aria-label="Lighting brightness" />
+        <div class="range-labels">
+            <span>0%</span>
+            <span>@(Room.LightsOn ? "Lights on" : "Lights off")</span>
+            <span>100%</span>
+        </div>
+    </div>
+    <div class="control-section air-quality">
+        <div class="section-label">Indoor environment</div>
+        <div class="air-quality-grid">
+            <div>
+                <span>CO₂ concentration</span>
+                <strong class="@(Room.Co2 >= 1000 ? "warning-text" : "")">@Room.Co2.ToString("F0") <small>ppm</small>
+                </strong>
+                <span class="sensor-state">@(Room.Co2 >= 1000 ? "Elevated · ventilation advised" : "Within normal range")</span>
+            </div>
+            <div>
+                <span>Relative humidity</span>
+                <strong>@Room.Humidity.ToString("F0") <small>%</small>
+                </strong>
+                <span class="sensor-state">Within normal range</span>
+            </div>
+        </div>
+    </div>
+    <div class="room-control-footer">
+        <span class="status-dot @(Room.IsOnline ? "normal" : "offline")">
+        </span>
+        <span>@(Room.IsOnline ? "Controller online · " + Room.LastSeen.ToLocalTime().ToString("HH:mm:ss") : "Controller offline · last known state")</span>
+        <strong>@Room.PowerKw.ToString("F2") kW</strong>
+    </div>
+</aside>
+@code {
+    [Parameter, EditorRequired] public Room Room { get; set; } = default!;
+}

@@ -1,0 +1,119 @@
+<div class="floor-plan-canvas">
+    <svg class="floor-plan-svg" viewBox="0 0 900 610" role="group" aria-label="@($"Floor {Floor.Number} interactive architectural plan, four monitored rooms")">
+        <defs>
+            <pattern id="plan-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <circle cx="1" cy="1" r="0.7" fill="#dfe7ed" />
+            </pattern>
+            <pattern id="offline-hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <line x1="0" x2="0" y1="0" y2="9" stroke="#cbd4de" stroke-width="1" />
+            </pattern>
+            <g id="workstation" fill="#fff" stroke="#bbcbd1" stroke-width="1.3">
+                <rect width="59" height="25" rx="3"/>
+                <rect x="19" y="-6" width="21" height="5" rx="1"/>
+                <rect x="22" y="29" width="16" height="11" rx="4"/>
+                <path d="M29 26v3" />
+            </g>
+            <g id="meeting-table" fill="#fff" stroke="#bdcdd2" stroke-width="1.3">
+                <rect width="100" height="35" rx="12"/>
+                <rect x="13" y="-12" width="18" height="8" rx="3"/>
+                <rect x="43" y="-12" width="18" height="8" rx="3"/>
+                <rect x="73" y="-12" width="18" height="8" rx="3"/>
+                <rect x="13" y="40" width="18" height="8" rx="3"/>
+                <rect x="43" y="40" width="18" height="8" rx="3"/>
+                <rect x="73" y="40" width="18" height="8" rx="3"/>
+            </g>
+            <g id="server-rack" fill="#fff" stroke="#c6b9b9" stroke-width="1.3">
+                <rect width="38" height="60" rx="2"/>
+                <path d="M5 12h28M5 24h28M5 36h28M5 48h28"/>
+                <circle cx="29" cy="6" r="1.3" fill="#ce7771"/>
+                <circle cx="29" cy="18" r="1.3" fill="#ce7771"/>
+            </g>
+        </defs>
+        <rect width="900" height="610" fill="url(#plan-grid)"/>
+        <g class="plan-dimensions" fill="none" stroke="#bbc8d1" stroke-width="1">
+            <path d="M53 36h794M53 31v10m794-10v10M27 60v460M22 60h10m-10 460h10"/>
+        </g>
+        <g>
+            <text x="450" y="29" class="plan-dimension-label" text-anchor="middle">HORIZON OFFICE CENTER · LEVEL @($"{Floor.Number:00}")</text>
+            <text x="16" y="290" transform="rotate(-90 16 290)" class="plan-dimension-label" text-anchor="middle">SCHEMATIC · NOT TO SCALE</text>
+        </g>
+        <rect x="52" y="60" width="796" height="460" rx="2" fill="#eef2f5" stroke="#74899a" stroke-width="6"/>
+        <rect x="60" y="250" width="780" height="66" fill="#f3f5f7"/>
+        <g>
+            <path d="M196 283h514" stroke="#d4dfe6" stroke-width="1.2" stroke-dasharray="5 7"/>
+            <text x="455" y="278" class="corridor-label" text-anchor="middle">CIRCULATION</text>
+        </g>
+        <g class="plan-core">
+            <rect x="60" y="250" width="112" height="66" fill="#e7edf2" stroke="#bdcbd5" stroke-width="2"/>
+            <path d="M70 258h57m-57 8h57m-57 8h57m-57 8h57m-57 8h57m-57 8h57m-57 8h57M140 303v-43m-5 5 5-5 5 5" stroke="#abbcc9" fill="none"/>
+            <rect x="742" y="250" width="98" height="66" fill="#e7edf2" stroke="#bdcbd5" stroke-width="2"/>
+            <rect x="751" y="260" width="34" height="43" fill="#f7f9fa" stroke="#b2c3ce"/>
+            <path d="M768 260v43" stroke="#c6d2da"/>
+            <text x="812" y="287" text-anchor="middle" class="corridor-label">LIFT</text>
+        </g>
+        @for (var i = 0; i < Floor.Rooms.Count; i++)
+        {
+        var room = Floor.Rooms[i];
+        var box = Box(i);
+        var selected = SelectedRoomId == room.Id;
+        <g class="plan-room @room.Status.ToString().ToLowerInvariant() @(selected ? "is-selected" : "")" role="button" tabindex="0" aria-label="@($"{room.Name}, {room.Temperature:F1} degrees Celsius, {room.Status}")" aria-pressed="@selected.ToString().ToLowerInvariant()" data-room-id="@room.Id" @onclick="() => RoomSelected.InvokeAsync(room)" @onkeydown="e => SelectWithKeyboard(e, room)">
+            <title>@room.Name · @room.Status · click to control</title>
+            <rect class="room-fill" x="@box.X" y="@box.Y" width="@box.W" height="@box.H" rx="1"/>
+            @if (!room.IsOnline) { <rect x="@box.X" y="@box.Y" width="@box.W" height="@box.H" fill="url(#offline-hatch)" opacity="0.35"/> }
+            <rect class="room-outline" x="@box.X" y="@box.Y" width="@box.W" height="@box.H" rx="1"/>
+            <g class="room-annotations">
+                <text x="@(box.X + 20)" y="@(box.Y + 25)" class="plan-room-id">@room.Id</text>
+                <text x="@(box.X + 20)" y="@(box.Y + 48)" class="plan-room-name">@room.Name</text>
+                <circle cx="@(box.X + box.W - 24)" cy="@(box.Y + 22)" r="4" class="room-status-dot"/>
+            </g>
+            <g class="plan-furniture" transform="@($"translate({box.X + box.W / 2 - 50} {box.Y + 75})")" aria-hidden="true">
+                @if (room.Id == "F3-03") { <use href="#server-rack"/>
+                <use href="#server-rack" x="56"/> }
+                else if (room.Name.Contains("Meeting") || room.Name.Contains("Conference")) { <use href="#meeting-table"/> }
+                else if (room.Name.Contains("Open Office") || room.Name.Contains("Training")) { <use href="#workstation" x="-30"/>
+                <use href="#workstation" x="65"/> }
+                else if (room.Name == "Reception") { <path d="M0 0h90v20H20v28H0Z" fill="#fff" stroke="#bdcdd2" stroke-width="1.3"/>
+                <rect x="13" y="-8" width="18" height="7" rx="2" fill="#fff" stroke="#bdcdd2"/> }
+                else { <use href="#workstation" x="22"/> }
+            </g>
+            <g class="room-live-values">
+                <text x="@(box.X + 20)" y="@(box.Y + box.H - 29)" class="plan-temperature">@room.Temperature.ToString("F1")<tspan class="plan-temperature-unit"> °C</tspan>
+                </text>
+                <text x="@(box.X + 20)" y="@(box.Y + box.H - 12)" class="plan-setpoint">SET @room.Setpoint.ToString("F1") °C</text>
+                <circle cx="@(box.X + box.W - 100)" cy="@(box.Y + box.H - 32)" r="3" fill="@(room.IsOccupied ? "#639888" : "#abb8c4")"/>
+                <text x="@(box.X + box.W - 90)" y="@(box.Y + box.H - 28)" class="plan-occupancy">@(room.IsOccupied ? "Occupied" : "Unoccupied")</text>
+                <text x="@(box.X + box.W - 102)" y="@(box.Y + box.H - 12)" class="plan-setpoint">LIGHTS @room.EffectiveBrightness%</text>
+            </g>
+        </g>
+        }
+        <g class="plan-windows" stroke="#91bdce" stroke-width="3" fill="none">
+            <path d="M95 60h100m45 0h95m135 0h100m45 0h110M95 520h100m45 0h95m135 0h100m45 0h110"/>
+            <path d="M52 100v95m0 165v105M848 100v95m0 165v105"/>
+        </g>
+        <g class="plan-doors" fill="none" stroke="#94a9b7" stroke-width="1.2">
+            <path d="M210 246v-34a34 34 0 0 1 34 34m330 0v-34a34 34 0 0 1 34 34M290 320v34a34 34 0 0 0 34-34m330 0v34a34 34 0 0 0 34-34"/>
+            <path d="M210 246h34m330 0h34m-318 74h34m330 0h34" stroke="#f2f6f5" stroke-width="7"/>
+        </g>
+        <g transform="translate(807 552)">
+            <path d="M0 22V-8m-5 9 5-9 5 9" fill="none" stroke="#8197a7" stroke-width="1.4"/>
+            <text x="0" y="-16" class="plan-dimension-label" text-anchor="middle">N</text>
+        </g>
+        <g>
+            <path d="M53 559h105m-105-4v9m52-9v9m53-9v9" stroke="#98acb9"/>
+            <text x="53" y="581" class="plan-dimension-label">ILLUSTRATIVE FLOOR LAYOUT</text>
+            <text x="450" y="567" text-anchor="middle" class="plan-dimension-label">SELECT A ROOM TO VIEW &amp; CONTROL</text>
+        </g>
+    </svg>
+</div>
+@code {
+    [Parameter, EditorRequired] public Floor Floor { get; set; } = default!;
+    [Parameter] public string? SelectedRoomId { get; set; }
+    [Parameter] public EventCallback<Room> RoomSelected { get; set; }
+    private (int X, int Y, int W, int H) Box(int i)
+    {
+        var topSplit = Floor.Number == 2 ? 450 : Floor.Number == 3 ? 405 : 385;
+        var bottomSplit = Floor.Number == 2 ? 485 : Floor.Number == 3 ? 420 : 480;
+        return i switch { 0 => (60, 68, topSplit - 64, 174), 1 => (topSplit + 4, 68, 836 - topSplit, 174), 2 => (60, 324, bottomSplit - 64, 188), _ => (bottomSplit + 4, 324, 836 - bottomSplit, 188) };
+    }
+    private Task SelectWithKeyboard(KeyboardEventArgs e, Room room) => e.Key is "Enter" or " " ? RoomSelected.InvokeAsync(room) : Task.CompletedTask;
+}

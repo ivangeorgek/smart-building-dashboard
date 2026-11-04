@@ -1,0 +1,31 @@
+@page "/rooms"
+@inherits BuildingComponentBase
+<PageTitle>Rooms &amp; Controls · Smart Building Dashboard</PageTitle>
+<PageHeading Title="Rooms & controls" Description="Twelve spaces. One connected workplace. Monitor and adjust every room.">
+    <span class="directory-total">12 rooms <span>across 3 floors</span>
+    </span>
+</PageHeading>
+<div class="floor-workspace rooms-workspace">
+    <div class="room-directory">
+        <section class="panel directory-toolbar">
+            <div class="floor-tabs" role="group" aria-label="Filter rooms by floor">
+                <MudButton Variant="Variant.Text" Class="@(_floor == 0 ? "floor-tab active" : "floor-tab")" OnClick="() => SetFloor(0)">All floors</MudButton>@foreach (var floor in State.Building.Floors) { <MudButton Variant="Variant.Text" Class="@(_floor == floor.Number ? "floor-tab active" : "floor-tab")" OnClick="() => SetFloor(floor.Number)">Floor @floor.Number</MudButton> }</div>
+            <span class="muted">@FilteredRooms.Count() rooms</span>
+        </section>
+        @foreach (var floor in State.Building.Floors.Where(f => _floor == 0 || f.Number == _floor))
+        {
+        <div class="directory-floor-heading">
+            <h2>Floor @floor.Number</h2>
+            <span>@floor.Description</span>
+        </div>
+        <div class="room-cards-grid">@foreach (var room in floor.Rooms) { <RoomStatusCard Room="room" Selected="@(_selected?.Id == room.Id)" OnSelected="SelectRoom" /> }</div>
+        }
+    </div>@if (_selected is not null) { <RoomControlPanel Room="_selected" @key="_selected.Id" /> }</div>
+@code {
+    private int _floor;
+    private Room? _selected;
+    private IEnumerable<Room> FilteredRooms => State.Rooms.Where(r => _floor == 0 || r.FloorNumber == _floor);
+    protected override void OnInitialized() { base.OnInitialized(); _selected = State.Rooms[0]; }
+    private void SelectRoom(Room room) => _selected = room;
+    private void SetFloor(int number) { _floor = number; if (_selected is null || number != 0 && _selected.FloorNumber != number) _selected = FilteredRooms.First(); }
+}

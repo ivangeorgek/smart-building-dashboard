@@ -1,0 +1,89 @@
+@page "/floor-plan"
+@inherits BuildingComponentBase
+<PageTitle>Floor Plan · Smart Building Dashboard</PageTitle>
+<PageHeading Title="Interactive floor plan" Description="Explore your building. Select a room to monitor and control its environment.">
+    <StatusBadge Label="@(State.IsPaused ? "Simulation paused" : "Live building data")" Tone="@(State.IsPaused ? "warning" : "normal")" />
+</PageHeading>
+<div class="floor-workspace">
+    <div class="floor-main">
+        <section class="panel plan-panel">
+            <div class="plan-toolbar">
+                <div class="floor-tabs" role="group" aria-label="Select floor">@foreach (var floor in State.Building.Floors) { <MudButton Variant="Variant.Text" Class="@(_floor == floor.Number ? "floor-tab active" : "floor-tab")" OnClick="() => ChooseFloor(floor.Number)">Floor @floor.Number</MudButton> }</div>
+                <div class="plan-toolbar-meta">
+                    <span class="status-dot">
+                    </span>4 monitored rooms<span class="vertical-divider">
+                    </span>LEVEL 0@_floor</div>
+            </div>
+            <div class="plan-heading">
+                <div>
+                    <h2>@CurrentFloor.Description</h2>
+                    <p>Horizon Office Center / Floor @_floor</p>
+                </div>
+                <span class="plan-schematic-tag">
+                    <MudIcon Icon="@Icons.Material.Outlined.Architecture" Size="Size.Small" />Schematic view</span>
+            </div>
+            <BuildingFloorPlan Floor="CurrentFloor" SelectedRoomId="_selected?.Id" RoomSelected="SelectRoom" />
+            <div class="plan-legend">
+                <span class="legend-title">ROOM STATUS</span>
+                <span>
+                    <i class="legend-swatch normal">
+                    </i>Normal</span>
+                <span>
+                    <i class="legend-swatch warning">
+                    </i>Warning</span>
+                <span>
+                    <i class="legend-swatch critical">
+                    </i>Critical</span>
+                <span>
+                    <i class="legend-swatch offline">
+                    </i>Offline</span>
+                <span>
+                    <i class="legend-swatch selected">
+                    </i>Selected</span>
+            </div>
+        </section>
+        <div class="floor-summary-grid">
+            <div class="panel floor-summary">
+                <MudIcon Icon="@Icons.Material.Outlined.Thermostat" />
+                <div>
+                    <span>Floor temperature</span>
+                    <strong>@CurrentFloor.AverageTemperature.ToString("F1") <small>°C</small>
+                    </strong>
+                </div>
+            </div>
+            <div class="panel floor-summary">
+                <MudIcon Icon="@Icons.Material.Outlined.PeopleOutline" />
+                <div>
+                    <span>Rooms occupied</span>
+                    <strong>@CurrentFloor.Rooms.Count(r => r.IsOccupied) <small>/ 4</small>
+                    </strong>
+                </div>
+            </div>
+            <div class="panel floor-summary">
+                <MudIcon Icon="@Icons.Material.Outlined.Bolt" />
+                <div>
+                    <span>Floor demand</span>
+                    <strong>@CurrentFloor.PowerKw.ToString("F1") <small>kW</small>
+                    </strong>
+                </div>
+            </div>
+        </div>
+        <div class="plan-tip">
+            <MudIcon Icon="@Icons.Material.Outlined.TouchApp" Size="Size.Small" />Click a room or use Tab and Enter. Controls apply instantly; measured readings update every 4 seconds.</div>
+    </div>
+    @if (_selected is not null) { <RoomControlPanel Room="_selected" @key="_selected.Id" /> }
+</div>
+@code {
+    [SupplyParameterFromQuery(Name = "floor")] public int? RequestedFloor { get; set; }
+    [SupplyParameterFromQuery(Name = "room")] public string? RequestedRoom { get; set; }
+    private int _floor = 1;
+    private Room? _selected;
+    private Floor CurrentFloor => State.GetFloor(_floor);
+    protected override void OnParametersSet()
+    {
+        _floor = RequestedFloor is >= 1 and <= 3 ? RequestedFloor.Value : 1;
+        _selected = CurrentFloor.Rooms.FirstOrDefault(r => r.Id == RequestedRoom) ?? CurrentFloor.Rooms[0];
+    }
+    private void ChooseFloor(int number) { _floor = number; _selected = CurrentFloor.Rooms[0]; }
+    private void SelectRoom(Room room) => _selected = room;
+}

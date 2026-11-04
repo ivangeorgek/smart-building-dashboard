@@ -1,0 +1,29 @@
+<button class="room-status-card @(Selected ? "is-selected" : "")" @onclick="() => OnSelected.InvokeAsync(Room)" aria-label="@($"Select {Room.Name}")" aria-pressed="@Selected.ToString().ToLowerInvariant()">
+    <div class="room-card-top">
+        <span>@Room.Id</span>
+        <StatusBadge Label="@Room.Status.ToString()" Tone="@Room.Status.ToString().ToLowerInvariant()" />
+    </div>
+    <h3>@Room.Name</h3>
+    <div class="room-card-reading">
+        <strong>@Room.Temperature.ToString("F1")<span> °C</span>
+        </strong>
+        <span>Set @Room.Setpoint.ToString("F1") °C</span>
+    </div>
+    <div class="room-card-sensors">
+        <span>
+            <MudIcon Icon="@Icons.Material.Outlined.Air" Size="Size.Small" />@Room.Co2.ToString("F0") ppm</span>
+        <span>
+            <MudIcon Icon="@Icons.Material.Outlined.WaterDrop" Size="Size.Small" />@Room.Humidity.ToString("F0")%</span>
+    </div>
+    <div class="room-card-footer">
+        <span>
+            <span class="status-dot @(Room.IsOccupied ? "normal" : "offline")">
+            </span>@(Room.IsOccupied ? "Occupied" : "Unoccupied")</span>
+        <span>@Room.HvacMode<span class="dot-separator">·</span>@Room.PowerKw.ToString("F1") kW</span>
+    </div>
+</button>
+@code {
+    [Parameter, EditorRequired] public Room Room { get; set; } = default!;
+    [Parameter] public bool Selected { get; set; }
+    [Parameter] public EventCallback<Room> OnSelected { get; set; }
+}
