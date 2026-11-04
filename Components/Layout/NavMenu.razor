@@ -1,0 +1,9 @@
+@inherits BuildingComponentBase
+<MudNavMenu Class="main-navigation">
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Outlined.SpaceDashboard">Overview</MudNavLink>
+    <MudNavLink Href="/floor-plan" Icon="@Icons.Material.Outlined.Layers">Floor Plan</MudNavLink>
+    <MudNavLink Href="/rooms" Icon="@Icons.Material.Outlined.MeetingRoom">Rooms &amp; Controls</MudNavLink>
+    <MudNavLink Href="/trends" Icon="@Icons.Material.Outlined.Insights">Trends &amp; Energy</MudNavLink>
+    <MudNavLink Href="/alarms" Icon="@Icons.Material.Outlined.NotificationsNone">Alarms <span class="nav-alarm-count">@State.ActiveAlarmCount</span>
+    </MudNavLink>
+</MudNavMenu>

@@ -1,0 +1,116 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject BuildingStateService State
+@inject BuildingSimulationService Simulation
+@inject NavigationManager Navigation
+
+<MudThemeProvider Theme="_theme" IsDarkMode="false" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<div class="app-shell @(_menuOpen ? "menu-open" : "")">
+    @if (_menuOpen) { <button class="sidebar-scrim" aria-label="Close navigation" @onclick="() => _menuOpen = false">
+    </button> }
+    <aside class="sidebar">
+        <a class="brand" href="/" aria-label="Smart Building Dashboard overview">
+            <div class="brand-mark">
+                <MudIcon Icon="@Icons.Material.Outlined.Apartment" />
+            </div>
+            <div>Smart Building<span>DASHBOARD</span>
+            </div>
+        </a>
+        <div class="site-selector">
+            <span class="site-avatar">H</span>
+            <div>Horizon Office Center<small>Vienna, Austria · Demo building</small>
+            </div>
+        </div>
+        <div class="nav-caption">BUILDING MANAGEMENT</div>
+        <NavMenu />
+        <div class="sidebar-bottom">
+            <div class="system-health">
+                <span class="status-dot">
+                </span>
+                <span>Simulation connected<small>Local building environment</small>
+                </span>
+            </div>
+            <div class="portfolio-label">
+                <MudIcon Icon="@Icons.Material.Outlined.Code" Size="Size.Small" />
+                <span>Independent portfolio project<small>C# · .NET 10 · Blazor</small>
+                </span>
+            </div>
+            <div class="sidebar-version">HORIZON BMS <span>v1.0</span>
+            </div>
+        </div>
+    </aside>
+    <div class="workspace">
+        <header class="topbar">
+            <MudIconButton Icon="@Icons.Material.Outlined.Menu" Class="mobile-menu" aria-label="Toggle navigation" OnClick="() => _menuOpen = !_menuOpen" />
+            <div class="breadcrumb">Workspace <span>/</span> <strong>@Section</strong>
+            </div>
+            <div class="header-meta">
+                <span class="simulation-label">
+                    <span class="status-dot">
+                    </span>Simulation Mode</span>
+                <span class="header-divider">
+                </span>
+                <span class="updated">Updated @State.LastUpdated.ToLocalTime().ToString("HH:mm:ss")</span>
+                <MudTooltip Text="@(State.IsPaused ? "Resume sensor simulation" : "Pause sensor simulation")">
+                    <MudIconButton Icon="@(State.IsPaused ? Icons.Material.Outlined.PlayArrow : Icons.Material.Outlined.Pause)" Size="Size.Small" aria-label="@(State.IsPaused ? "Resume simulation" : "Pause simulation")" OnClick="State.TogglePause" />
+                </MudTooltip>
+                <span class="operator-avatar" title="Local demo operator">OP</span>
+            </div>
+        </header>
+        @if (State.IsPaused) { <div class="paused-banner">
+            <MudIcon Icon="@Icons.Material.Outlined.PauseCircleOutline" Size="Size.Small" />Simulation paused. Sensor readings are held; room controls remain available.</div> }
+        <main class="main-content">@Body</main>
+        <footer class="app-footer">
+            <span>
+                <span class="status-dot">
+                </span>@(State.IsPaused ? "Simulation paused" : "Live simulation · 4 s refresh")</span>
+            <span>All values are simulated. No physical devices connected.</span>
+            <span>Horizon Office Center</span>
+        </footer>
+    </div>
+</div>
+<div id="blazor-error-ui" data-nosnippet>Connection interrupted. <a href="." class="reload">Reload dashboard</a>
+    <span class="dismiss">×</span>
+</div>
+@code {
+    private bool _menuOpen;
+    private string Section => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?')[0].Trim('/') switch
+    {
+        "floor-plan" => "Floor Plan", "rooms" => "Rooms & Controls", "trends" => "Trends & Energy", "alarms" => "Alarms", "" => "Overview", _ => "Workspace"
+    };
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#177f83", Secondary = "#3979bd", Background = "#f4f6f8", Surface = "#ffffff",
+            TextPrimary = "#243548", TextSecondary = "#788592", Success = "#268a69", Warning = "#c18a2b", Error = "#d15a58",
+            LinesDefault = "#e5eaf0", Divider = "#e9edf1", TableLines = "#e9edf1", ActionDefault = "#788592"
+        },
+        LayoutProperties = new LayoutProperties { DefaultBorderRadius = "8px" },
+        Typography = new Typography { Default = new DefaultTypography { FontFamily = ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"], FontSize = "0.875rem" } }
+    };
+    protected override void OnInitialized()
+    {
+        State.Changed += Refresh;
+        Navigation.LocationChanged += LocationChanged;
+    }
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) Simulation.Start(action => InvokeAsync(action));
+        return Task.CompletedTask;
+    }
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+    private void LocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args)
+    {
+        _menuOpen = false;
+        _ = InvokeAsync(StateHasChanged);
+    }
+    public void Dispose()
+    {
+        State.Changed -= Refresh;
+        Navigation.LocationChanged -= LocationChanged;
+    }
+}

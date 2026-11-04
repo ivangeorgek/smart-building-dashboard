@@ -1,0 +1,180 @@
+@page "/"
+@inherits BuildingComponentBase
+<PageTitle>Overview · Smart Building Dashboard</PageTitle>
+<PageHeading Title="Building overview" Description="A clear view of your building. Everything in one place.">
+    <span class="date-label">
+        <MudIcon Icon="@Icons.Material.Outlined.CalendarToday" Size="Size.Small" />@State.LastUpdated.ToString("dd MMM yyyy")</span>
+    <MudButton Href="/floor-plan" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Layers" DropShadow="false">Explore floor plan</MudButton>
+</PageHeading>
+<div class="metrics-grid">
+    <MetricCard Label="Rooms monitored" Value="@State.Rooms.Count.ToString()" Icon="@Icons.Material.Outlined.MeetingRoom" Detail="Across 3 floors" Tone="blue" />
+    <MetricCard Label="Occupied rooms" Value="@State.OccupiedRooms.ToString()" Unit="/ 12" Icon="@Icons.Material.Outlined.PeopleOutline" Detail="@(Math.Round(State.OccupiedRooms / 12.0 * 100) + "% occupancy")" />
+    <MetricCard Label="Average temperature" Value="@State.AverageTemperature.ToString("F1")" Unit="°C" Icon="@Icons.Material.Outlined.Thermostat" Detail="Building-wide measured average" />
+    <MetricCard Label="Current power demand" Value="@State.PowerKw.ToString("F1")" Unit="kW" Icon="@Icons.Material.Outlined.Bolt" Detail="@(State.PowerKw > BuildingStateService.HighPowerThresholdKw ? "Above 16 kW advisory limit" : "Within advisory limit")" Tone="amber" />
+    <MetricCard Label="Active alarms" Value="@State.ActiveAlarmCount.ToString("00")" Icon="@Icons.Material.Outlined.NotificationsActive" Detail="@(State.UnacknowledgedCount + " awaiting acknowledgement")" Tone="red" />
+</div>
+<div class="overview-main-grid">
+    <section class="panel energy-panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Energy consumption</h2>
+                <p>Previous 24 hours · simulated history</p>
+            </div>
+            <span class="period-tag">24 hours</span>
+        </div>
+        <div class="energy-summary">
+            <div>
+                <strong>@State.EnergyKwh.ToString("F1")<span> kWh</span>
+                </strong>
+                <small>24-hour seed + this session</small>
+            </div>
+            <div class="energy-current">
+                <span class="teal-line">
+                </span>
+                <span>Hourly consumption</span>
+            </div>
+        </div>
+        <EnergyChart Readings="State.HourlyEnergy" Height="185px" />
+        <div class="panel-note">
+            <MudIcon Icon="@Icons.Material.Outlined.Info" Size="Size.Small" />Estimated energy includes room loads and central equipment.</div>
+    </section>
+    <section class="panel building-panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Building status</h2>
+                <p>Horizon Office Center</p>
+            </div>
+            <StatusBadge Label="Attention required" Tone="warning" />
+        </div>
+        <div class="building-status-content">
+            <svg class="building-illustration" viewBox="0 0 180 180" aria-hidden="true">
+                <path d="M20 137 90 175 165 134V42L95 8 20 48Z" fill="#f1f6f8"/>
+                <path d="m20 48 70 36 75-42M90 84v91" fill="none" stroke="#b8c9d2" stroke-width="1.5"/>
+                @for (var i = 0; i < 3; i++) { <g>
+                    <path d="@($"M20 {68 + i * 29} 90 {104 + i * 29} 165 {62 + i * 29}")" fill="none" stroke="#c2d1da" stroke-width="1.5"/>
+                    <path d="@($"m32 {64 + i * 29} 45 23v13L32 {77 + i * 29}Z")" fill="@(i == 0 ? "#e9c7b7" : "#badedc")"/>
+                    <path d="@($"m104 {84 + i * 29} 48-27v13l-48 27Z")" fill="#a7d0d3"/>
+                </g> }
+                <path d="m20 48 75-40 70 34-75 42Z" fill="#e4edf2" stroke="#b8c9d2"/>
+                <path d="m45 45 51-26 42 21-49 28Z" fill="#f8fbfc" stroke="#c7d6df"/>
+            </svg>
+            <div class="building-stats">
+                <div>
+                    <span>Device connectivity</span>
+                    <strong>@State.OnlineDevices <small>/ @State.TotalDevices online</small>
+                    </strong>
+                    <div class="connectivity-track">
+                        <span style="width:@(State.OnlineDevices * 100 / State.TotalDevices)%">
+                        </span>
+                    </div>
+                </div>
+                <div class="small-stat-row">
+                    <div>
+                        <strong>3</strong>
+                        <span>Floors</span>
+                    </div>
+                    <div>
+                        <strong>@State.OccupiedRooms<span class="muted">/12</span>
+                        </strong>
+                        <span>Occupied</span>
+                    </div>
+                    <div>
+                        <strong class="danger-text">@(State.TotalDevices - State.OnlineDevices)</strong>
+                        <span>Offline</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="building-health-line">
+            <MudIcon Icon="@Icons.Material.Outlined.Shield" Size="Size.Small" />
+            <span>@(State.Equipment.Count(e => e.IsOnline)) of 4 equipment devices connected</span>
+        </div>
+        <a class="attention-strip" href="/alarms">
+            <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
+            <span>@State.ActiveAlarmCount active conditions need attention</span>
+            <MudIcon Icon="@Icons.Material.Outlined.ArrowForward" Size="Size.Small" />
+        </a>
+    </section>
+</div>
+<div class="overview-secondary-grid">
+    <section class="panel floor-temperature-panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Temperature by floor</h2>
+                <p>Live measured values · averages by room</p>
+            </div>
+            <span class="unit-tag">°C</span>
+        </div>
+        @foreach (var floor in State.Building.Floors)
+        {
+        <a class="floor-temp-row" href="@($"/floor-plan?floor={floor.Number}")">
+            <span class="floor-icon">
+                <MudIcon Icon="@Icons.Material.Outlined.Layers" Size="Size.Small" />
+            </span>
+            <div class="floor-temp-name">
+                <strong>Floor @floor.Number</strong>
+                <span>@floor.Rooms.Count rooms · @floor.Rooms.Count(r => r.IsOccupied) occupied</span>
+            </div>
+            <div class="temperature-bar">
+                <span style="width:@((int)((floor.AverageTemperature - 18) / 12 * 100))%" class="@(floor.Rooms.Any(r => r.Status == OperationalStatus.Critical) ? "warm" : "")">
+                </span>
+            </div>
+            <strong class="floor-temp-value">@floor.AverageTemperature.ToString("F1")°</strong>
+            <span class="status-dot @(floor.Rooms.Any(r => r.Status is OperationalStatus.Critical or OperationalStatus.Warning) ? "warning" : "normal")">
+            </span>
+        </a>
+        }
+        <div class="panel-note">
+            <span class="status-dot warning">
+            </span>Server Room @State.GetRoom("F3-03").Temperature.ToString("F1") °C · above the 27 °C limit</div>
+    </section>
+    <section class="panel recent-alarms-panel">
+        <div class="panel-heading">
+            <div>
+                <h2>Recent alarms <span class="count-tag">@State.ActiveAlarmCount</span>
+                </h2>
+                <p>Active conditions across the building</p>
+            </div>
+            <MudButton Href="/alarms" Color="Color.Primary" Size="Size.Small" EndIcon="@Icons.Material.Outlined.ArrowForward">View all</MudButton>
+        </div>
+        @foreach (var alarm in State.Alarms.Where(a => a.IsActive).OrderBy(a => a.Severity).ThenByDescending(a => a.TriggeredAt).Take(3))
+        {
+        <a class="recent-alarm" href="/alarms">
+            <span class="alarm-symbol @(alarm.Severity == AlarmSeverity.Critical ? "critical" : "warning")">
+                <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
+            </span>
+            <div>
+                <strong>@alarm.Source</strong>
+                <span>@alarm.Description</span>
+            </div>
+            <time>@alarm.TriggeredAt.ToLocalTime().ToString("HH:mm")</time>
+        </a>
+        }
+        @if (State.ActiveAlarmCount == 0) { <div class="empty-state">All clear. No active alarms.</div> }
+    </section>
+</div>
+<section class="panel equipment-panel">
+    <div class="panel-heading">
+        <div>
+            <h2>Equipment overview</h2>
+            <p>Central plant &amp; building controllers</p>
+        </div>
+        <span class="muted">4 monitored devices</span>
+    </div>
+    <div class="equipment-grid">
+        @foreach (var device in State.Equipment)
+        {
+        <div class="equipment-item">
+            <span class="equipment-icon @(device.IsOnline ? "" : "offline")">
+                <MudIcon Icon="@(device.Type == "Ventilation" ? Icons.Material.Outlined.Air : device.Type == "Lighting" ? Icons.Material.Outlined.Lightbulb : Icons.Material.Outlined.Tune)" />
+            </span>
+            <div>
+                <strong>@device.Id</strong>
+                <span>@device.Name</span>
+                <small>Last seen @device.LastUpdated.ToLocalTime().ToString("HH:mm:ss")</small>
+            </div>
+            <StatusBadge Label="@device.Status.ToString()" Tone="@(device.IsOnline ? "normal" : "offline")" />
+        </div>
+        }
+    </div>
+</section>

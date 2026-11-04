@@ -1,0 +1,15 @@
+@page "/Error"
+@using System.Diagnostics
+<PageTitle>Workspace error · Smart Building Dashboard</PageTitle>
+<PageHeading Title="The workspace couldn't load" Description="Reload the dashboard to start a fresh simulation session." />
+<MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-5">An unexpected error interrupted this request. Your local server logs contain the technical details.</MudAlert>
+@if (!string.IsNullOrWhiteSpace(RequestId))
+{
+<p class="muted mb-5">Request reference: <code>@RequestId</code>
+</p>
+}
+<MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Refresh">Return to overview</MudButton>
+@code {
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+    private string? RequestId => Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

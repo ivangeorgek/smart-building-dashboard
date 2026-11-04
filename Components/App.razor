@@ -1,0 +1,25 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" />
+    <link rel="stylesheet" href="@Assets["SmartBuildingDashboard.styles.css"]" />
+    <link rel="stylesheet" href="@Assets["css/dashboard.css"]" />
+    <ImportMap />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="description" content="An interactive building automation portfolio: monitor Horizon Office Center, explore floor plans, and control simulated rooms." />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <ReconnectModal />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
+</body>
+
+</html>

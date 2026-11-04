@@ -1,0 +1,15 @@
+<div class="energy-chart" role="img" aria-label="Simulated hourly electrical energy over the previous 24 complete hours, in kilowatt-hours">
+    <MudBlazor.Charts.Line T="double" ChartSeries="Series" ChartLabels="Labels" ChartOptions="_options" MatchBoundsToSize="true" Width="100%" Height="@Height" />
+</div>
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<EnergyReading> Readings { get; set; } = [];
+    [Parameter] public string Height { get; set; } = "210px";
+    private string[] Labels => Readings.Select((r, i) => i % 4 == 0 || i == 23 ? r.Timestamp.ToString("HH:mm") : "").ToArray();
+    private List<ChartSeries<double>> Series => [new() { Name = "Consumption (kWh)", Data = new(Readings.Select(r => r.EnergyKwh).ToArray()) }];
+    private readonly LineChartOptions _options = new()
+    {
+        ChartPalette = ["#289c9c"], YAxisTicks = 5, YAxisFormat = "0", YAxisTitle = "kWh",
+        XAxisLines = false, YAxisLines = true, LineStrokeWidth = 2.5, ShowLegend = false, ShowToolTips = true,
+        LineDisplayType = LineDisplayType.Area
+    };
+}

@@ -1,0 +1,13 @@
+<div class="page-heading">
+    <div>
+        <div class="eyebrow">HORIZON OFFICE CENTER <span>/</span> OPERATIONS</div>
+        <h1>@Title</h1>
+        <p>@Description</p>
+    </div>
+    @if (ChildContent is not null) { <div class="heading-actions">@ChildContent</div> }
+</div>
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Description { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
